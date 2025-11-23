@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <title>Meu Financeiro</title>
+    <style>
+        body { font-family: sans-serif; max-width: 800px; margin: 2rem auto; padding: 0 1rem; }
+        form { background: #f4f4f4; padding: 1rem; border-radius: 8px; display: flex; gap: 10px; flex-wrap: wrap; }
+        input, select, button { padding: 10px; border: 1px solid #ccc; border-radius: 4px; }
+        button { background: #28a745; color: white; cursor: pointer; font-weight: bold; }
+        button:hover { background: #218838; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { border-bottom: 1px solid #ddd; padding: 12px; text-align: left; }
+        th { background-color: #f8f9fa; }
+        .valor { color: #dc3545; font-weight: bold; }
+
+        /* ESTILOS DE IMPRESSÃO (Só ativam na hora de imprimir/salvar PDF) */
+        @media print {
+        /* Esconde elementos desnecessários no papel */
+        form,           /* O formulário de cadastro */
+        button,         /* Todos os botões (Salvar, Editar, Excluir, Imprimir) */
+        select,         /* O seletor de categoria */
+        hr,             /* Linhas divisórias */
+        .sem-impressao  /* Classe utilitária para esconder qualquer outra coisa */
+        {
+            display: none !important;
+        }
+
+        /* Ajustes para ficar bonito no papel */
+        body {
+            margin: 0;
+            padding: 0;
+            font-size: 12pt;
+            background: white;
+        }
+
+        table {
+            width: 100%;
+            border: 1px solid #000;
+        }
+
+        th, td {
+            border: 1px solid #000; /* Bordas pretas sólidas para leitura */
+            color: black;
+        }
+
+        /* Garante que o gráfico apareça e não fique gigante */
+        canvas {
+            max-height: 300px !important;
+            display: block;
+            margin: 0 auto;
+        }
+        
+        /* Esconde a coluna de "Ações" da tabela (onde ficam os botões) */
+        table th:last-child,
+        table td:last-child {
+            display: none;
+        }
+        }
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+
+    <h1>💰 Meu Financeiro</h1>
+
+    <form id="form-despesa">
+        <input type="text" id="descricao" placeholder="Descrição (ex: Padaria)" required style="flex: 2;">
+        <input type="date" id="data-despesa" required style="flex: 1;">
+        <input type="number" id="valor" placeholder="Valor (R$)" step="0.01" required style="flex: 1;">
+        
+        <select id="categoria" required style="flex: 1;">
+            <option value="" disabled selected>Categoria</option>
+        </select>
+
+        <button type="submit">Salvar</button>
+    </form>
+
+    <hr style="margin: 2rem 0; border: 0; border-top: 1px solid #ccc;">
+
+    <div class="sem-impressao" style="background: #e9ecef; padding: 1rem; border-radius: 8px;">
+        <h3>🏷️ Gerenciar Categorias</h3>
+        
+        <div style="display: flex; gap: 20px; flex-wrap: wrap;">
+            <form id="form-categoria" style="flex: 1; background: transparent; padding: 0;">
+                <input type="text" id="nome-nova-categoria" placeholder="Nova Categoria (ex: Viagem)" required style="width: 100%;">
+                <button type="submit" style="background: #007bff;">Adicionar</button>
+            </form>
+
+            <div style="flex: 1;">
+                <ul id="lista-categorias" style="list-style: none; padding: 0; max-height: 150px; overflow-y: auto;">
+                    </ul>
+            </div>
+        </div>
+    </div>
+
+    <hr style="margin: 2rem 0; border: 0; border-top: 1px solid #ccc;">
+
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; background: #fff3cd; padding: 10px; border-radius: 8px; border: 1px solid #ffeeba;">
+        
+        <div>
+            <label for="filtro-mes" style="font-weight: bold;">📅 Período:</label>
+            <input type="month" id="filtro-mes">
+            <button onclick="window.print()" style="margin-left: 10px; background: #6c757d;">🖨️ Relatório</button>
+        </div>
+
+        <div style="font-size: 1.2rem;">
+            Total: <span id="total-gastos" style="font-weight: bold; color: #dc3545;">R$ 0,00</span>
+        </div>
+    </div>
+
+    <div style="display: flex; gap: 20px; margin-bottom: 20px; flex-wrap: wrap;">
+
+        <div style="flex: 1; background: white; border: 1px solid #ddd; border-radius: 8px; padding: 10px; min-width: 300px; height: 300px; display: flex; justify-content: center;">
+            <canvas id="grafico-despesas"></canvas>
+        </div>
+
+    </div>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Descrição</th>
+                <th>Categoria</th>
+                <th>Data</th>
+                <th>Valor</th>
+                <th>Ações</th>
+            </tr>
+        </thead>
+        <tbody id="lista-despesas">
+            </tbody>
+    </table>
+
+    <script src="script.js"></script>
+</body>
+</html>

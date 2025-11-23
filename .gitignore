@@ -1,0 +1,16 @@
+# Dependências (Sempre ignorar)
+node_modules
+
+# Build (Sempre ignorar)
+dist
+
+# Variáveis de Ambiente (Sempre ignorar por segurança)
+.env
+
+# Banco de Dados SQLite (Opcional: se quiser salvar seus dados de teste, remova esta linha. 
+# Mas o profissional é ignorar e recriar o banco com o schema)
+*.db
+*.db-journal
+
+# Logs
+*.log
