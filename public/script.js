@@ -55,6 +55,14 @@ inputData.value = hojeISO;
 
 let meuGrafico = null; // Variável global
 
+// Instância da Modal do Bootstrap (será carregada depois)
+let bsModalDespesa;
+
+// Inicializa a modal quando a página carregar
+document.addEventListener('DOMContentLoaded', () => {
+    bsModalDespesa = new bootstrap.Modal(document.getElementById('modalDespesa'));
+});
+
 // ATUALIZADA: Busca categorias e preenche O SELECT e A LISTA
 // ATUALIZADA: carregarCategorias agora cria o botão Editar
 async function carregarCategorias() {
@@ -89,6 +97,7 @@ async function carregarCategorias() {
                 <button onclick="deletarCategoria(${cat.id})" style="background: #dc3545; color: white; padding: 2px 8px; font-size: 0.8rem; border:none; cursor:pointer;">🗑️</button>
             </div>
         `;
+        li.className = "list-group-item d-flex justify-content-between align-items-center";
         listaCategoriasUL.appendChild(li);
     });
 }
@@ -221,7 +230,7 @@ async function carregarDespesas() {
             <td>${d.categoria}</td>
             <td>${dataFormatada}</td>
             <td class="valor">R$ ${d.valor.toFixed(2)}</td>
-            <td>
+            <td class="text-end no-print">
                 <button onclick="prepararEdicao(${d.id}, '${d.descricao}', ${d.valor}, '${d.categoria}', '${d.data}')" style="background: #ffc107; color: black; margin-right: 5px;">Editar</button>
                 <button onclick="deletarDespesa(${d.id})" style="background: #dc3545;">X</button>
             </td>
@@ -269,6 +278,19 @@ window.prepararEdicao = (id, descricao, valor, nomeCategoria, dataISO) => {
     btnSalvar.textContent = "Atualizar Despesa";
     btnSalvar.style.background = "#ffc107"; // Amarelo
     btnSalvar.style.color = "black";
+
+    // MUDANÇAS VISUAIS NA MODAL
+    document.getElementById('titulo-modal-despesa').textContent = "Editar Despesa";
+    document.getElementById('modal-despesa-header').classList.remove('bg-success');
+    document.getElementById('modal-despesa-header').classList.add('bg-warning');
+
+    const btn = document.getElementById('btn-salvar-despesa');
+    btn.textContent = "Atualizar";
+    btn.classList.remove('btn-success');
+    btn.classList.add('btn-warning');
+
+    // ABRE A MODAL
+    bsModalDespesa.show();
 }
 
 // 3. Função para Salvar (Quando clica no botão)
@@ -320,9 +342,24 @@ function resetarFormulario() {
     form.reset();
     inputData.value = hojeISO; // Volta para "Hoje"
     idDespesaEmEdicao = null;
+
+    // Reseta Estilos da Modal
+    document.getElementById('titulo-modal-despesa').textContent = "Nova Despesa";
+    const header = document.getElementById('modal-despesa-header');
+    header.classList.remove('bg-warning');
+    header.classList.add('bg-success');
+
     btnSalvar.textContent = "Salvar";
     btnSalvar.style.background = "#28a745"; // Verde
     btnSalvar.style.color = "white";
+
+    const btn = document.getElementById('btn-salvar-despesa');
+    btn.textContent = "Salvar";
+    btn.classList.remove('btn-warning');
+    btn.classList.add('btn-success');
+    
+    // Fecha a modal se estiver aberta (se o submit chamou isso)
+    bsModalDespesa?.hide();
 }
 
 /* async function atualizarGrafico() {

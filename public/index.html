@@ -2,140 +2,160 @@
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
-    <title>Meu Financeiro</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - Meu Financeiro</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
     <style>
-        body { font-family: sans-serif; max-width: 800px; margin: 2rem auto; padding: 0 1rem; }
-        form { background: #f4f4f4; padding: 1rem; border-radius: 8px; display: flex; gap: 10px; flex-wrap: wrap; }
-        input, select, button { padding: 10px; border: 1px solid #ccc; border-radius: 4px; }
-        button { background: #28a745; color: white; cursor: pointer; font-weight: bold; }
-        button:hover { background: #218838; }
-        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-        th, td { border-bottom: 1px solid #ddd; padding: 12px; text-align: left; }
-        th { background-color: #f8f9fa; }
-        .valor { color: #dc3545; font-weight: bold; }
-
-        /* ESTILOS DE IMPRESSÃO (Só ativam na hora de imprimir/salvar PDF) */
-        @media print {
-        /* Esconde elementos desnecessários no papel */
-        form,           /* O formulário de cadastro */
-        button,         /* Todos os botões (Salvar, Editar, Excluir, Imprimir) */
-        select,         /* O seletor de categoria */
-        hr,             /* Linhas divisórias */
-        .sem-impressao  /* Classe utilitária para esconder qualquer outra coisa */
-        {
-            display: none !important;
-        }
-
-        /* Ajustes para ficar bonito no papel */
-        body {
-            margin: 0;
-            padding: 0;
-            font-size: 12pt;
-            background: white;
-        }
-
-        table {
-            width: 100%;
-            border: 1px solid #000;
-        }
-
-        th, td {
-            border: 1px solid #000; /* Bordas pretas sólidas para leitura */
-            color: black;
-        }
-
-        /* Garante que o gráfico apareça e não fique gigante */
-        canvas {
-            max-height: 300px !important;
-            display: block;
-            margin: 0 auto;
-        }
+        body { background-color: #f8f9fa; }
+        .card-dashboard { border: none; box-shadow: 0 4px 6px rgba(0,0,0,0.1); transition: transform 0.2s; }
+        .card-dashboard:hover { transform: translateY(-2px); }
+        .valor-destaque { font-size: 1.5rem; font-weight: bold; color: #dc3545; }
         
-        /* Esconde a coluna de "Ações" da tabela (onde ficam os botões) */
-        table th:last-child,
-        table td:last-child {
-            display: none;
-        }
+        /* Estilos de Impressão (Mantidos e Ajustados para Bootstrap) */
+        @media print {
+            .navbar, .btn, .modal, .no-print { display: none !important; }
+            .card { border: 1px solid #ddd !important; box-shadow: none !important; }
+            body { background: white; }
         }
     </style>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
 
-    <h1>💰 Meu Financeiro</h1>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary mb-4">
+        <div class="container">
+            <a class="navbar-brand fw-bold" href="#">💰 Meu Financeiro</a>
+            <div class="d-flex align-items-center text-white">
+                <span class="me-3">Olá, <span id="nome-usuario" class="fw-bold">...</span></span>
+                <button onclick="sair()" class="btn btn-outline-light btn-sm">Sair</button>
+            </div>
+        </div>
+    </nav>
 
-    <form id="form-despesa">
-        <input type="text" id="descricao" placeholder="Descrição (ex: Padaria)" required style="flex: 2;">
-        <input type="date" id="data-despesa" required style="flex: 1;">
-        <input type="number" id="valor" placeholder="Valor (R$)" step="0.01" required style="flex: 1;">
+    <div class="container">
         
-        <select id="categoria" required style="flex: 1;">
-            <option value="" disabled selected>Categoria</option>
-        </select>
+        <div class="row mb-4 align-items-center g-3">
+            <div class="col-md-3">
+                <div class="card card-dashboard p-2">
+                    <label class="form-label text-muted small mb-1">📅 Período</label>
+                    <input type="month" id="filtro-mes" class="form-control border-0 fw-bold">
+                </div>
+            </div>
 
-        <button type="submit">Salvar</button>
-    </form>
+            <div class="col-md-3">
+                <div class="card card-dashboard p-3 text-center">
+                    <small class="text-muted">Total Gasto</small>
+                    <div id="total-gastos" class="valor-destaque">R$ 0,00</div>
+                </div>
+            </div>
 
-    <hr style="margin: 2rem 0; border: 0; border-top: 1px solid #ccc;">
+            <div class="col-md-6 text-md-end no-print">
+                <button class="btn btn-success btn-lg me-2 shadow-sm" data-bs-toggle="modal" data-bs-target="#modalDespesa" onclick="resetarFormulario()">
+                    ➕ Nova Despesa
+                </button>
+                <button class="btn btn-secondary me-2 shadow-sm" data-bs-toggle="modal" data-bs-target="#modalCategoria">
+                    🏷️ Categorias
+                </button>
+                <button onclick="window.print()" class="btn btn-outline-dark shadow-sm">
+                    🖨️ Imprimir
+                </button>
+            </div>
+        </div>
 
-    <div class="sem-impressao" style="background: #e9ecef; padding: 1rem; border-radius: 8px;">
-        <h3>🏷️ Gerenciar Categorias</h3>
-        
-        <div style="display: flex; gap: 20px; flex-wrap: wrap;">
-            <form id="form-categoria" style="flex: 1; background: transparent; padding: 0;">
-                <input type="text" id="nome-nova-categoria" placeholder="Nova Categoria (ex: Viagem)" required style="width: 100%;">
-                <button type="submit" style="background: #007bff;">Adicionar</button>
-            </form>
+        <div class="row g-4">
+            <div class="col-md-4">
+                <div class="card card-dashboard h-100">
+                    <div class="card-header bg-white fw-bold">📊 Distribuição</div>
+                    <div class="card-body d-flex align-items-center justify-content-center">
+                        <div style="width: 100%; max-height: 300px;">
+                            <canvas id="grafico-despesas"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
 
-            <div style="flex: 1;">
-                <ul id="lista-categorias" style="list-style: none; padding: 0; max-height: 150px; overflow-y: auto;">
-                    </ul>
+            <div class="col-md-8">
+                <div class="card card-dashboard h-100">
+                    <div class="card-header bg-white fw-bold">📝 Detalhamento</div>
+                    <div class="card-body p-0 table-responsive">
+                        <table class="table table-hover table-striped mb-0 align-middle">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Descrição</th>
+                                    <th>Categoria</th>
+                                    <th>Data</th>
+                                    <th>Valor</th>
+                                    <th class="text-end no-print">Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody id="lista-despesas">
+                                </tbody>
+                        </table>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
 
-    <hr style="margin: 2rem 0; border: 0; border-top: 1px solid #ccc;">
-
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; background: #fff3cd; padding: 10px; border-radius: 8px; border: 1px solid #ffeeba;">
-        
-        <div>
-            <label for="filtro-mes" style="font-weight: bold;">📅 Período:</label>
-            <input type="month" id="filtro-mes">
-            <button onclick="window.print()" style="margin-left: 10px; background: #6c757d;">🖨️ Relatório</button>
-        </div>
-
-        <div style="font-size: 1.2rem;">
-            Total: <span id="total-gastos" style="font-weight: bold; color: #dc3545;">R$ 0,00</span>
+    <div class="modal fade" id="modalDespesa" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header bg-success text-white" id="modal-despesa-header">
+                    <h5 class="modal-title" id="titulo-modal-despesa">Nova Despesa</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="form-despesa">
+                        <div class="mb-3">
+                            <label class="form-label">Descrição</label>
+                            <input type="text" id="descricao" class="form-control" required>
+                        </div>
+                        <div class="row g-2 mb-3">
+                            <div class="col-6">
+                                <label class="form-label">Data</label>
+                                <input type="date" id="data-despesa" class="form-control" required>
+                            </div>
+                            <div class="col-6">
+                                <label class="form-label">Valor (R$)</label>
+                                <input type="number" id="valor" class="form-control" step="0.01" required>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Categoria</label>
+                            <select id="categoria" class="form-select" required>
+                                <option value="" disabled selected>Selecione...</option>
+                            </select>
+                        </div>
+                        <div class="d-grid">
+                            <button type="submit" class="btn btn-success" id="btn-salvar-despesa">Salvar</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
         </div>
     </div>
 
-    <div style="display: flex; gap: 20px; margin-bottom: 20px; flex-wrap: wrap;">
-
-        <div style="flex: 1; background: white; border: 1px solid #ddd; border-radius: 8px; padding: 10px; min-width: 300px; height: 300px; display: flex; justify-content: center;">
-            <canvas id="grafico-despesas"></canvas>
+    <div class="modal fade" id="modalCategoria" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Gerenciar Categorias</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="form-categoria" class="d-flex gap-2 mb-3">
+                        <input type="text" id="nome-nova-categoria" class="form-control" placeholder="Nova Categoria" required>
+                        <button type="submit" class="btn btn-primary">Adicionar</button>
+                    </form>
+                    <ul id="lista-categorias" class="list-group list-group-flush">
+                        </ul>
+                </div>
+            </div>
         </div>
-
     </div>
 
-    <div style="text-align: right;">
-        Olá, <span id="nome-usuario">usuário</span>! 
-        <button onclick="sair()" style="background: #666; padding: 5px 10px; font-size: 0.8rem;">Sair</button>
-    </div>
-
-    <table>
-        <thead>
-            <tr>
-                <th>Descrição</th>
-                <th>Categoria</th>
-                <th>Data</th>
-                <th>Valor</th>
-                <th>Ações</th>
-            </tr>
-        </thead>
-        <tbody id="lista-despesas">
-            </tbody>
-    </table>
-
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="script.js"></script>
 </body>
 </html>

@@ -7,18 +7,21 @@ function alternarModo() {
     const btnAcao = document.getElementById('btn-acao');
     const btnToggle = document.getElementById('btn-toggle');
     const inputNome = document.getElementById('nome');
+    const divNome = document.getElementById('div-nome'); // NOVO: Pegamos a div pai
 
     if (isCadastro) {
         titulo.textContent = "Criar Conta";
         btnAcao.textContent = "Cadastrar";
         btnToggle.textContent = "Já tem conta? Entre";
         inputNome.style.display = "block";
+        divNome.style.display = "block"; // Mostra a div inteira
         inputNome.required = true;
     } else {
         titulo.textContent = "Entrar";
         btnAcao.textContent = "Entrar";
         btnToggle.textContent = "Não tem conta? Cadastre-se";
         inputNome.style.display = "none";
+        divNome.style.display = "none"; // Esconde a div inteira
         inputNome.required = false;
     }
 }
