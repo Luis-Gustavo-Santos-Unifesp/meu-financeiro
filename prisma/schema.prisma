@@ -1,0 +1,52 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// NOVO: Tabela de Usuários
+model Usuario {
+  id       Int       @id @default(autoincrement())
+  email    String    @unique
+  senha    String // Guardará o hash, não a senha real
+  nome     String
+  despesas Despesa[] // Um usuário tem muitas despesas
+  logs     Log[] // Um usuário gera muitos logs
+}
+
+model Categoria {
+  id       Int       @id @default(autoincrement())
+  nome     String
+  despesas Despesa[]
+}
+
+model Despesa {
+  id        Int      @id @default(autoincrement())
+  descricao String
+  valor     Float
+  data      DateTime
+
+  categoriaId Int
+  categoria   Categoria @relation(fields: [categoriaId], references: [id])
+
+  // NOVO: Relacionamento com Usuário (O Dono)
+  usuarioId Int
+  usuario   Usuario @relation(fields: [usuarioId], references: [id])
+}
+
+// NOVO: Tabela de Auditoria (Logs)
+model Log {
+  id       Int      @id @default(autoincrement())
+  acao     String // Ex: "CRIAR_DESPESA", "EXCLUIR_CATEGORIA"
+  detalhes String // Ex: "ID 5 foi apagado"
+  dataHora DateTime @default(now())
+
+  usuarioId Int
+  usuario   Usuario @relation(fields: [usuarioId], references: [id])
+}

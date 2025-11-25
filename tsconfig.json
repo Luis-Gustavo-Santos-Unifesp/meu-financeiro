@@ -15,5 +15,5 @@
     // "types": ["node"],
     // and npm install -D @types/node
   },
-  "include": ["src/**/*"]
+  "include": ["src/**/*", "public"]
 }

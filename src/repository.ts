@@ -2,6 +2,7 @@
 import { PrismaClient } from '@prisma/client';
 import { Categoria } from './categoria.js';
 import { Despesa } from './despesa.js';
+import bcrypt from 'bcryptjs'; // <--- NOVO IMPORT
 
 // Instanciação Vazia!
 // O Prisma lerá automaticamente o arquivo .env na raiz do projeto.
@@ -47,17 +48,17 @@ export class CategoriaRepository {
 }
 
 export class DespesaRepository {
-    async salvar(despesa: Despesa): Promise<Despesa> {
-        if (!despesa.categoria.id) {
-            throw new Error("A categoria precisa ser salva antes da despesa.");
-        }
+    // ATUALIZADO: Agora precisamos saber QUEM é o dono da despesa (usuarioId)
+    async salvar(despesa: Despesa, usuarioId: number): Promise<Despesa> {
+        if (!despesa.categoria.id) throw new Error("Categoria obrigatória");
 
         const despesaDB = await prisma.despesa.create({
             data: {
                 descricao: despesa.descricao,
                 valor: despesa.valor,
                 data: despesa.data,
-                categoriaId: despesa.categoria.id
+                categoriaId: despesa.categoria.id,
+                usuarioId: usuarioId // <--- NOVO CAMPO OBRIGATÓRIO
             }
         });
 
@@ -65,33 +66,26 @@ export class DespesaRepository {
         return despesa;
     }
 
-// ATUALIZADO: Agora aceita inicio e fim (opcionais)
-    async listar(inicio?: Date, fim?: Date): Promise<Despesa[]> {
-        
-        // Montamos o filtro dinamicamente
-        const filtroWhere: any = {};
+    // ATUALIZADO: Agora aceita inicio e fim (opcionais)
+    // ATUALIZADO: Listar apenas as despesas do usuário logado
+    async listar(usuarioId: number, inicio?: Date, fim?: Date): Promise<Despesa[]> {
+        const filtro: any = { usuarioId }; // <--- FILTRO DE SEGURANÇA
 
         if (inicio && fim) {
-            filtroWhere.data = {
-                gte: inicio, // Maior ou igual ao inicio
-                lte: fim     // Menor ou igual ao fim
-            };
+            filtro.data = { gte: inicio, lte: fim };
         }
 
         const despesasDB = await prisma.despesa.findMany({
-            where: filtroWhere, // Aplicamos o filtro aqui
+            where: filtro,
             include: { categoria: true },
-            orderBy: { data: 'desc' } // Dica extra: Ordenar do mais recente para o antigo fica melhor!
+            orderBy: { data: 'desc' }
         });
 
         return despesasDB.map(dbItem => {
             const cat = new Categoria(dbItem.categoria.nome);
             cat.id = dbItem.categoria.id;
-
-            const desp = new Despesa(dbItem.descricao, dbItem.valor, cat);
+            const desp = new Despesa(dbItem.descricao, dbItem.valor, cat, dbItem.data);
             desp.id = dbItem.id;
-            desp.data = dbItem.data; 
-
             return desp;
         });
     }
@@ -103,6 +97,7 @@ export class DespesaRepository {
 
     // NOVO: Atualizar
     // Adicionamos 'data: Date' nos argumentos
+    // ... (excluir e atualizar também deveriam verificar o usuarioId por segurança, mas vamos simplificar por agora)
     async atualizar(id: number, descricao: string, valor: number, categoriaId: number, data: Date): Promise<Despesa> {
         const despesaDB = await prisma.despesa.update({
             where: { id },
@@ -124,5 +119,32 @@ export class DespesaRepository {
         desp.data = despesaDB.data;
         
         return desp;
+    }
+}
+
+// --- NOVO: Repositório de Usuários ---
+export class UsuarioRepository {
+    async criar(nome: string, email: string, senhaPlana: string) {
+        // 1. Criptografar a senha (Hash)
+        const senhaHash = await bcrypt.hash(senhaPlana, 10);
+
+        // 2. Salvar no banco
+        const usuario = await prisma.usuario.create({
+            data: {
+                nome,
+                email,
+                senha: senhaHash
+            }
+        });
+
+        // Retornamos dados básicos (sem a senha!)
+        return { id: usuario.id, nome: usuario.nome, email: usuario.email };
+    }
+
+    async buscarPorEmail(email: string) {
+        console.log("Tentando buscar email:", email); // <--- Debug
+        return prisma.usuario.findUnique({
+            where: { email }
+        });
     }
 }

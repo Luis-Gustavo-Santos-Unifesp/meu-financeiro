@@ -1,5 +1,20 @@
 const API_URL = 'http://localhost:3000';
 
+// --- SEGURANÇA ---
+const token = localStorage.getItem('token');
+
+if (!token) {
+    // Se não tem token, manda pro login
+    window.location.href = 'login.html';
+}
+
+// Função de Logout (para usar no botão Sair)
+function sair() {
+    localStorage.removeItem('token');
+    localStorage.removeItem('usuario');
+    window.location.href = 'login.html';
+}
+
 // Elementos da tela
 const form = document.getElementById('form-despesa');
 const selectCategoria = document.getElementById('categoria');
@@ -43,7 +58,15 @@ let meuGrafico = null; // Variável global
 // ATUALIZADA: Busca categorias e preenche O SELECT e A LISTA
 // ATUALIZADA: carregarCategorias agora cria o botão Editar
 async function carregarCategorias() {
-    const resposta = await fetch(`${API_URL}/categorias`);
+    //const resposta = await fetch(`${API_URL}/categorias`);
+    const resposta = await fetch(`${API_URL}/categorias`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+    });
+    
+    if (resposta.status === 401 || resposta.status === 403) {
+        sair(); // Se o token expirou, expulsa o usuário
+        return;
+    }
     const categorias = await resposta.json();
 
     selectCategoria.innerHTML = '<option value="" disabled selected>Categoria</option>';
@@ -100,7 +123,10 @@ formCategoria.addEventListener('submit', async (e) => {
     try {
         const res = await fetch(url, {
             method: metodo,
-            headers: { 'Content-Type': 'application/json' },
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}` // <--- O CRACHÁ VAI AQUI
+            },
             body: JSON.stringify({ nome })
         });
 
@@ -129,9 +155,18 @@ formCategoria.addEventListener('submit', async (e) => {
 window.deletarCategoria = async (id) => {
     if (!confirm("Tem certeza? Se houver despesas nesta categoria, elas impedirão a exclusão.")) return;
 
+    // const res = await fetch(`${API_URL}/categorias/${id}`, {
+    //     method: 'DELETE'
+    // });
     const res = await fetch(`${API_URL}/categorias/${id}`, {
+        headers: { 'Authorization': `Bearer ${token}` },
         method: 'DELETE'
     });
+    
+    if (res.status === 401 || res.status === 403) {
+        sair(); // Se o token expirou, expulsa o usuário
+        return;
+    }
 
     if (res.ok) {
         carregarCategorias();
@@ -160,7 +195,15 @@ async function carregarDespesas() {
     // toISOString() manda no formato padrão que o Backend entende
     const url = `${API_URL}/despesas?inicio=${dataInicio.toISOString()}&fim=${dataFim.toISOString()}`;
 
-    const resposta = await fetch(url);
+    //const resposta = await fetch(url);
+    const resposta = await fetch(url, {
+        headers: { 'Authorization': `Bearer ${token}` }
+    });
+    
+    if (resposta.status === 401 || resposta.status === 403) {
+        sair(); // Se o token expirou, expulsa o usuário
+        return;
+    }
     const despesas = await resposta.json();
 
     tabelaDespesas.innerHTML = '';
@@ -253,7 +296,10 @@ form.addEventListener('submit', async (evento) => {
     try {
         const resposta = await fetch(url, {
             method: metodo,
-            headers: { 'Content-Type': 'application/json' },
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}` // <--- O CRACHÁ VAI AQUI
+            },
             body: JSON.stringify(dados)
         });
 
@@ -279,7 +325,7 @@ function resetarFormulario() {
     btnSalvar.style.color = "white";
 }
 
-async function atualizarGrafico() {
+/* async function atualizarGrafico() {
     // Pegamos as datas do mesmo input que a tabela usa
     const [anoSelect, mesSelect] = inputMes.value.split('-');
     const dataInicio = new Date(anoSelect, mesSelect - 1, 1);
@@ -288,7 +334,10 @@ async function atualizarGrafico() {
 
     const url = `${API_URL}/dashboard?inicio=${dataInicio.toISOString()}&fim=${dataFim.toISOString()}`;
 
-    const res = await fetch(url);
+    //const res = await fetch(url);
+    const res = await fetch(url, {
+        headers: { 'Authorization': `Bearer ${token}` }
+    });
     const dados = await res.json(); // { labels: [...], valores: [...] }
 
     const ctx = document.getElementById('grafico-despesas');
@@ -320,7 +369,65 @@ async function atualizarGrafico() {
             }
         }
     });
+} */
+
+async function atualizarGrafico() {
+    const [anoSelect, mesSelect] = inputMes.value.split('-');
+    const dataInicio = new Date(anoSelect, mesSelect - 1, 1);
+    const dataFim = new Date(anoSelect, mesSelect, 0);
+    dataFim.setHours(23, 59, 59, 999);
+
+    const url = `${API_URL}/dashboard?inicio=${dataInicio.toISOString()}&fim=${dataFim.toISOString()}`;
+    
+    // --- CORREÇÃO AQUI: Adicionando o Token ---
+    try {
+        const res = await fetch(url, {
+            headers: { 
+                'Authorization': `Bearer ${token}` 
+            }
+        });
+
+        // Se o token for inválido, sai
+        if (res.status === 401 || res.status === 403) {
+            sair(); 
+            return;
+        }
+
+        const dados = await res.json(); 
+
+        const ctx = document.getElementById('grafico-despesas');
+
+        if (meuGrafico) {
+            meuGrafico.destroy();
+        }
+
+        meuGrafico = new Chart(ctx, {
+            type: 'pie',
+            data: {
+                labels: dados.labels,
+                datasets: [{
+                    label: 'Gastos (R$)',
+                    data: dados.valores,
+                    borderWidth: 1,
+                    backgroundColor: [
+                        '#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF', '#FF9F40'
+                    ]
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { position: 'right' }
+                }
+            }
+        });
+    } catch (error) {
+        console.error("Erro ao carregar gráfico:", error);
+    }
 }
+
+document.getElementById('nome-usuario').textContent = localStorage.getItem('usuario');
 
 // Inicialização: Carrega os dados ao abrir a página
 carregarCategorias();
