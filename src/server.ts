@@ -5,7 +5,7 @@ import jwt from 'jsonwebtoken'; // <--- NOVO
 import bcrypt from 'bcryptjs';  // <--- NOVO
 import { Categoria } from './categoria.js';
 import { Despesa } from './despesa.js';
-import { CategoriaRepository, DespesaRepository, UsuarioRepository } from './repository.js'; // <--- NOVO
+import { CategoriaRepository, DespesaRepository, UsuarioRepository, LogRepository } from './repository.js'; // <--- NOVO
 
 const app = express();
 const port = 3000;
@@ -19,7 +19,8 @@ app.use(express.static('public'));  // Diz ao Express para servir os arquivos da
 // 2. Instanciar os Repositórios
 const catRepo = new CategoriaRepository();
 const despRepo = new DespesaRepository();
-const userRepo = new UsuarioRepository(); // <--- NOVO
+const userRepo = new UsuarioRepository();
+const logRepo = new LogRepository();
 
 // --- MIDDLEWARE DE AUTENTICAÇÃO ---
 // Essa função age como um porteiro.
@@ -167,6 +168,15 @@ app.get('/despesas', autenticar, async (req, res) => {
     }
 });
 
+app.get('/logs', autenticar, async (req, res) => {
+    try {
+        const logs = await logRepo.listar(req.userId!);
+        res.json(logs);
+    } catch (error: any) {
+        res.status(500).json({ erro: error.message });
+    }
+});
+
 // POST /despesas (Salva com o dono!)
 app.post('/despesas', autenticar, async (req, res) => {
     try {
@@ -177,6 +187,9 @@ app.post('/despesas', autenticar, async (req, res) => {
         
         // Passamos o req.userId para salvar!
         const despesaSalva = await despRepo.salvar(novaDespesa, req.userId!);
+
+        await logRepo.registrar(req.userId!, "CRIAR_DESPESA", `Criou despesa ${despesaSalva.id}: ${despesaSalva.descricao}`);
+
         res.status(201).json(despesaSalva);
     } catch (error: any) {
         res.status(400).json({ erro: error.message });
@@ -188,6 +201,9 @@ app.delete('/despesas/:id', autenticar, async (req, res) => {
     try {
         const id = parseInt(req.params.id);
         await despRepo.excluir(id);
+
+        await logRepo.registrar(req.userId!, "EXCLUIR_DESPESA", `Excluiu despesa ID ${id}`);
+
         res.status(204).send();
     } catch (error: any) {
         res.status(500).json({ erro: error.message });
@@ -207,6 +223,9 @@ app.put('/despesas/:id', autenticar, async (req, res) => {
         const dataObj = new Date(data + "T12:00:00");
 
         const despesaAtualizada = await despRepo.atualizar(id, descricao, parseFloat(valor), parseInt(categoriaId), dataObj);
+
+        await logRepo.registrar(req.userId!, "ATUALIZAR_DESPESA", `Atualizou despesa ID ${id}`);
+
         res.json(despesaAtualizada);
     } catch (error: any) {
         res.status(400).json({ erro: error.message });

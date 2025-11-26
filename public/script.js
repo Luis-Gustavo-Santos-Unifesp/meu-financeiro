@@ -464,6 +464,48 @@ async function atualizarGrafico() {
     }
 }
 
+// NOVA: Carregar Histórico
+window.carregarLogs = async () => {
+    try {
+        const res = await fetch(`${API_URL}/logs`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        
+        if (res.status === 401 || res.status === 403) { sair(); return; }
+
+        const logs = await res.json();
+        const tbody = document.getElementById('lista-logs');
+        tbody.innerHTML = '';
+
+        if (logs.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="3" class="text-center p-3 text-muted">Nenhuma atividade registrada ainda.</td></tr>';
+            return;
+        }
+
+        logs.forEach(log => {
+            // Formatar Data
+            const data = new Date(log.dataHora).toLocaleString('pt-BR');
+            
+            // Cores para ações
+            let corBadge = "bg-secondary";
+            if (log.acao.includes("CRIAR")) corBadge = "bg-success";
+            if (log.acao.includes("EXCLUIR")) corBadge = "bg-danger";
+            if (log.acao.includes("ATUALIZAR")) corBadge = "bg-warning text-dark";
+
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td class="text-muted small">${data}</td>
+                <td><span class="badge ${corBadge}">${log.acao}</span></td>
+                <td>${log.detalhes}</td>
+            `;
+            tbody.appendChild(tr);
+        });
+    } catch (error) {
+        console.error("Erro ao carregar logs", error);
+        alert("Erro ao carregar histórico.");
+    }
+}
+
 document.getElementById('nome-usuario').textContent = localStorage.getItem('usuario');
 
 // Inicialização: Carrega os dados ao abrir a página

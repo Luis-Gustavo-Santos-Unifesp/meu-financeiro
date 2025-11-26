@@ -148,3 +148,31 @@ export class UsuarioRepository {
         });
     }
 }
+
+// --- NOVO: Repositório de Logs (Auditoria) ---
+export class LogRepository {
+    // 1. Gravar um novo log
+    async registrar(usuarioId: number, acao: string, detalhes: string) {
+        try {
+            await prisma.log.create({
+                data: {
+                    usuarioId,
+                    acao,
+                    detalhes
+                }
+            });
+        } catch (e) {
+            // Se o log falhar, apenas imprimimos no console para não travar o sistema principal
+            console.error("Falha ao gravar log:", e);
+        }
+    }
+
+    // 2. Listar logs de um usuário
+    async listar(usuarioId: number): Promise<any[]> {
+        return prisma.log.findMany({
+            where: { usuarioId },
+            orderBy: { dataHora: 'desc' }, // Mais recentes primeiro
+            take: 50 // Limita aos últimos 50
+        });
+    }
+}

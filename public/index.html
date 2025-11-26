@@ -29,6 +29,9 @@
             <div class="d-flex align-items-center text-white">
                 <span class="me-3">Olá, <span id="nome-usuario" class="fw-bold">...</span></span>
                 <button onclick="sair()" class="btn btn-outline-light btn-sm">Sair</button>
+                <button class="btn btn-outline-light btn-sm me-2" data-bs-toggle="modal" data-bs-target="#modalLogs" onclick="carregarLogs()">
+                    📋 Histórico
+                </button>
             </div>
         </div>
     </nav>
@@ -150,6 +153,30 @@
                     </form>
                     <ul id="lista-categorias" class="list-group list-group-flush">
                         </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="modalLogs" tabindex="-1">
+        <div class="modal-dialog modal-lg modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header bg-dark text-white">
+                    <h5 class="modal-title">📋 Histórico de Atividades</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body p-0">
+                    <table class="table table-striped mb-0" style="font-size: 0.9rem;">
+                        <thead class="table-light sticky-top">
+                            <tr>
+                                <th>Data/Hora</th>
+                                <th>Ação</th>
+                                <th>Detalhes</th>
+                            </tr>
+                        </thead>
+                        <tbody id="lista-logs">
+                            </tbody>
+                    </table>
                 </div>
             </div>
         </div>
